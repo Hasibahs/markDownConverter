@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MarkItDown - Batch File Converter</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --primary-light: #eff6ff;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --border: #e2e8f0;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --radius: 12px;
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.07);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 32px 16px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 920px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        header {
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: #1e293b;
+            letter-spacing: -0.5px;
+        }
+
+        header h1 span {
+            color: var(--primary);
+        }
+
+        header p {
+            color: var(--text-muted);
+            margin-top: 8px;
+            font-size: 1.05rem;
+        }
+
+        .card {
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 24px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+        }
+
+        /* Output Directory Config Card */
+        .dir-card {
+            background: #ffffff;
+            border-radius: var(--radius);
+            padding: 18px 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 2px 4px -1px rgb(0 0 0 / 0.05);
+        }
+
+        .dir-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .dir-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .dir-title svg {
+            width: 18px;
+            height: 18px;
+            stroke: var(--primary);
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .dir-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .dir-input {
+            flex: 1;
+            padding: 9px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            font-size: 0.92rem;
+            color: #1e293b;
+            background: #f8fafc;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+
+        .dir-input:focus {
+            border-color: var(--primary);
+            background: #fff;
+        }
+
+        .dir-checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            font-size: 0.88rem;
+            color: #475569;
+        }
+
+        .dir-checkbox-row input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            accent-color: var(--primary);
+        }
+
+        .dir-checkbox-row label {
+            cursor: pointer;
+        }
+
+        /* Drop Area */
+        .drop-zone {
+            border: 2px dashed #93c5fd;
+            border-radius: var(--radius);
+            padding: 44px 24px;
+            text-align: center;
+            background-color: var(--primary-light);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .drop-zone.dragover {
+            border-color: var(--primary);
+            background-color: #dbeafe;
+            transform: scale(1.01);
+        }
+
+        .drop-zone svg {
+            width: 50px;
+            height: 50px;
+            fill: none;
+            stroke: var(--primary);
+            stroke-width: 1.8;
+            margin-bottom: 12px;
+        }
+
+        .drop-zone p.title {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: #1e3a8a;
+        }
+
+        .drop-zone p.sub {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+
+        .file-types-badge {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            justify-content: center;
+            margin-top: 14px;
+        }
+
+        .badge {
+            background: rgba(37, 99, 235, 0.12);
+            color: var(--primary);
+            padding: 3px 9px;
+            border-radius: 9999px;
+            font-size: 0.76rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 9px 16px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all 0.15s ease;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-success {
+            background-color: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover:not(:disabled) {
+            background-color: #15803d;
+        }
+
+        .btn-secondary {
+            background-color: #e2e8f0;
+            color: #334155;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background-color: #cbd5e1;
+        }
+
+        .btn:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        /* File List */
+        .file-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #f1f5f9;
+            padding: 12px 16px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            transition: background 0.2s;
+        }
+
+        .file-item.success {
+            border-left: 4px solid var(--success);
+            background: #f0fdf4;
+        }
+
+        .file-item.error {
+            border-left: 4px solid var(--danger);
+            background: #fef2f2;
+        }
+
+        .file-item.loading {
+            border-left: 4px solid var(--primary);
+        }
+
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            overflow: hidden;
+        }
+
+        .file-name {
+            font-weight: 600;
+            font-size: 0.93rem;
+            color: #1e293b;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 380px;
+        }
+
+        .file-size {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+
+        .file-status {
+            font-size: 0.83rem;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        .saved-path-tag {
+            display: block;
+            font-size: 0.78rem;
+            color: #15803d;
+            margin-top: 3px;
+            font-family: Consolas, monospace;
+        }
+
+        .file-actions {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 0.82rem;
+            border-radius: 6px;
+        }
+
+        /* Progress Bar */
+        .progress-wrapper {
+            margin-top: 16px;
+            display: none;
+        }
+
+        .progress-bar-bg {
+            background-color: #e2e8f0;
+            border-radius: 9999px;
+            height: 10px;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        .progress-bar-fill {
+            background-color: var(--primary);
+            height: 100%;
+            width: 0%;
+            transition: width 0.2s ease;
+        }
+
+        .progress-text {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 6px;
+            font-weight: 500;
+        }
+
+        /* Success Alert Banner */
+        .alert-banner {
+            display: none;
+            background: #ecfdf5;
+            border: 1px solid #a7f3d0;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-top: 16px;
+            align-items: center;
+            justify-content: space-between;
+            color: #065f46;
+            font-size: 0.9rem;
+        }
+
+        /* Modal Preview */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.65);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+            padding: 24px;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: var(--radius);
+            width: 100%;
+            max-width: 850px;
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.2);
+        }
+
+        .modal-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            font-size: 1.1rem;
+            color: #1e293b;
+        }
+
+        .modal-body {
+            padding: 20px 24px;
+            overflow-y: auto;
+            flex: 1;
+            background: #fafafa;
+        }
+
+        .modal-body pre {
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-family: Consolas, Monaco, "Courier New", monospace;
+            font-size: 0.9rem;
+            color: #334155;
+            background: #f1f5f9;
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .modal-footer {
+            padding: 12px 24px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            background: white;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #64748b;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 15px;
+            height: 15px;
+            border: 2px solid rgba(0, 0, 0, 0.1);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>MarkIt<span>Down</span> Converter</h1>
+            <p>Batch convert PDFs, Word, Excel, PowerPoint, Audio, and Images to Markdown in one click</p>
+        </header>
+
+        <!-- Output Directory & AI Semantic Config Card -->
+        <div class="dir-card">
+            <div class="dir-header">
+                <span class="dir-title">
+                    <svg viewBox="0 0 24 24"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+                    Remembered Output Directory:
+                </span>
+                <span style="font-size: 0.8rem; color: #16a34a; font-weight: 600;">Saved automatically</span>
+            </div>
+            <div class="dir-row">
+                <input type="text" id="outputDirInput" class="dir-input" placeholder="Select output folder...">
+                <button class="btn btn-secondary" id="browseDirBtn">Browse...</button>
+                <button class="btn btn-secondary" id="openDirBtn" title="Open this folder in Windows File Explorer">Open Folder</button>
+            </div>
+            <div class="dir-checkbox-row">
+                <input type="checkbox" id="autoSaveCheckbox" checked>
+                <label for="autoSaveCheckbox">
+                    <strong>Auto-save directly to this directory</strong> (bypasses browser download dialogs)
+                </label>
+            </div>
+            <div class="dir-checkbox-row" style="margin-top: 6px;">
+                <input type="checkbox" id="semanticModeCheckbox" checked>
+                <label for="semanticModeCheckbox">
+                    <strong>AI-Optimized Semantic Structure</strong> (enforces # headings, flattens troubleshooting tables to key-value lists, strips footers & page noise)
+                </label>
+            </div>
+        </div>
+
+        <div class="card">
+            <!-- Drop Zone -->
+            <div class="drop-zone" id="dropZone">
+                <svg viewBox="0 0 24 24">
+                    <path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <p class="title">Drag & drop multiple files here, or click to browse</p>
+                <p class="sub">Select any number of files to convert in bulk</p>
+                <input type="file" id="fileInput" multiple style="display: none;">
+
+                <div class="file-types-badge">
+                    <span class="badge">PDF</span>
+                    <span class="badge">DOCX / DOC</span>
+                    <span class="badge">PPTX</span>
+                    <span class="badge">XLSX / XLS</span>
+                    <span class="badge">HTML / EPUB</span>
+                    <span class="badge">WAV / MP3</span>
+                    <span class="badge">JPG / PNG</span>
+                    <span class="badge">ZIP</span>
+                </div>
+            </div>
+
+            <!-- Global Action Bar -->
+            <div class="controls" id="controlsBar" style="display: none;">
+                <div>
+                    <span id="fileCountText" style="font-weight: 600; color: #475569;">0 files queued</span>
+                </div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button class="btn btn-secondary" id="clearBtn">Clear All</button>
+                    <button class="btn btn-primary" id="convertAllBtn">Convert All Files</button>
+                    <button class="btn btn-success" id="saveAllDirBtn" style="display: none;">Save All to Directory</button>
+                    <button class="btn btn-secondary" id="downloadAllBtn" style="display: none;">Download All (.md)</button>
+                    <button class="btn btn-secondary" id="downloadZipBtn" style="display: none;">Download ZIP</button>
+                </div>
+            </div>
+
+            <!-- Success Alert Banner -->
+            <div class="alert-banner" id="alertBanner">
+                <span id="alertBannerText">Files saved successfully!</span>
+                <button class="btn btn-sm btn-secondary" id="alertOpenFolderBtn">Open Folder</button>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="progress-wrapper" id="progressWrapper">
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill" id="progressBarFill"></div>
+                </div>
+                <div class="progress-text">
+                    <span id="progressStatus">Converting files...</span>
+                    <span id="progressPercentage">0%</span>
+                </div>
+            </div>
+
+            <!-- File List Queue -->
+            <div class="file-list" id="fileList"></div>
+        </div>
+    </div>
+
+    <!-- Preview Modal -->
+    <div class="modal-overlay" id="previewModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Markdown Preview</h3>
+                <button class="close-btn" id="modalCloseBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <pre id="modalContent"></pre>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="modalCopyBtn">Copy to Clipboard</button>
+                <button class="btn btn-primary" id="modalDownloadBtn">Download .md</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileList = document.getElementById('fileList');
+        const controlsBar = document.getElementById('controlsBar');
+        const fileCountText = document.getElementById('fileCountText');
+        const clearBtn = document.getElementById('clearBtn');
+        const convertAllBtn = document.getElementById('convertAllBtn');
+        const saveAllDirBtn = document.getElementById('saveAllDirBtn');
+        const downloadAllBtn = document.getElementById('downloadAllBtn');
+        const downloadZipBtn = document.getElementById('downloadZipBtn');
+        const progressWrapper = document.getElementById('progressWrapper');
+        const progressBarFill = document.getElementById('progressBarFill');
+        const progressStatus = document.getElementById('progressStatus');
+        const progressPercentage = document.getElementById('progressPercentage');
+        const alertBanner = document.getElementById('alertBanner');
+        const alertBannerText = document.getElementById('alertBannerText');
+        const alertOpenFolderBtn = document.getElementById('alertOpenFolderBtn');
+
+        const outputDirInput = document.getElementById('outputDirInput');
+        const browseDirBtn = document.getElementById('browseDirBtn');
+        const openDirBtn = document.getElementById('openDirBtn');
+        const autoSaveCheckbox = document.getElementById('autoSaveCheckbox');
+        const semanticModeCheckbox = document.getElementById('semanticModeCheckbox');
+
+        const previewModal = document.getElementById('previewModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalContent = document.getElementById('modalContent');
+        const modalCloseBtn = document.getElementById('modalCloseBtn');
+        const modalCopyBtn = document.getElementById('modalCopyBtn');
+        const modalDownloadBtn = document.getElementById('modalDownloadBtn');
+
+        let queue = [];
+        let currentModalFile = null;
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+
+        // --- Load & Save Directory & Semantic Config ---
+        async function loadConfig() {
+            try {
+                const resp = await fetch('/api/config');
+                const data = await resp.json();
+                if (data.output_dir) outputDirInput.value = data.output_dir;
+                if (data.auto_save !== undefined) autoSaveCheckbox.checked = data.auto_save;
+                if (data.semantic_mode !== undefined) semanticModeCheckbox.checked = data.semantic_mode;
+            } catch (err) {
+                console.error('Failed to load config', err);
+            }
+        }
+
+        async function saveConfig() {
+            try {
+                await fetch('/api/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        output_dir: outputDirInput.value,
+                        auto_save: autoSaveCheckbox.checked,
+                        semantic_mode: semanticModeCheckbox.checked
+                    })
+                });
+            } catch (err) {
+                console.error('Failed to save config', err);
+            }
+        }
+
+        outputDirInput.addEventListener('change', saveConfig);
+        autoSaveCheckbox.addEventListener('change', saveConfig);
+        semanticModeCheckbox.addEventListener('change', saveConfig);
+
+        browseDirBtn.addEventListener('click', async () => {
+            browseDirBtn.disabled = true;
+            browseDirBtn.textContent = 'Selecting...';
+            try {
+                const resp = await fetch('/api/browse-folder', { method: 'POST' });
+                const data = await resp.json();
+                if (data.success && data.folder) {
+                    outputDirInput.value = data.folder;
+                }
+            } catch (err) {
+                console.error('Browse error', err);
+            } finally {
+                browseDirBtn.disabled = false;
+                browseDirBtn.textContent = 'Browse...';
+            }
+        });
+
+        openDirBtn.addEventListener('click', async () => {
+            try {
+                await fetch('/api/open-folder', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ output_dir: outputDirInput.value })
+                });
+            } catch (err) {
+                console.error('Open folder error', err);
+            }
+        });
+
+        alertOpenFolderBtn.addEventListener('click', () => openDirBtn.click());
+
+        // Initial config load
+        loadConfig();
+
+        // --- Drag & Drop ---
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+            fileInput.value = '';
+        });
+
+        function handleFiles(files) {
+            for (const file of files) {
+                const id = 'f_' + Math.random().toString(36).substring(2, 9);
+                queue.push({
+                    id: id,
+                    file: file,
+                    status: 'queued',
+                    result: null,
+                    errorMsg: null,
+                    mdFilename: null,
+                    savedPath: null
+                });
+            }
+            renderQueue();
+        }
+
+        function renderQueue() {
+            if (queue.length === 0) {
+                controlsBar.style.display = 'none';
+                progressWrapper.style.display = 'none';
+                alertBanner.style.display = 'none';
+                fileList.innerHTML = '';
+                return;
+            }
+
+            controlsBar.style.display = 'flex';
+            fileCountText.textContent = `${queue.length} file${queue.length > 1 ? 's' : ''} queued`;
+
+            // Check if any converted
+            const hasSuccess = queue.some(item => item.status === 'success');
+            saveAllDirBtn.style.display = hasSuccess ? 'inline-flex' : 'none';
+            downloadAllBtn.style.display = hasSuccess ? 'inline-flex' : 'none';
+            downloadZipBtn.style.display = hasSuccess ? 'inline-flex' : 'none';
+
+            fileList.innerHTML = '';
+            queue.forEach(item => {
+                const el = document.createElement('div');
+                el.className = `file-item ${item.status}`;
+                el.id = item.id;
+
+                let statusBadge = '';
+                if (item.status === 'queued') statusBadge = '<span style="color:#64748b;">Ready</span>';
+                else if (item.status === 'converting') statusBadge = '<span style="color:#2563eb;"><span class="spinner"></span> Converting...</span>';
+                else if (item.status === 'success') statusBadge = '<span style="color:#16a34a;">Converted</span>';
+                else if (item.status === 'error') statusBadge = `<span style="color:#dc2626;" title="${item.errorMsg || 'Error'}">Failed</span>`;
+
+                let savedPathHtml = '';
+                if (item.savedPath) {
+                    savedPathHtml = `<span class="saved-path-tag">&#10003; Saved: ${item.savedPath}</span>`;
+                }
+
+                let actionBtns = '';
+                if (item.status === 'success') {
+                    actionBtns = `
+                        <button class="btn btn-secondary btn-sm preview-btn" data-id="${item.id}">Preview</button>
+                        <button class="btn btn-primary btn-sm download-btn" data-id="${item.id}">Download .md</button>
+                    `;
+                } else if (item.status === 'queued') {
+                    actionBtns = `<button class="btn btn-secondary btn-sm remove-btn" data-id="${item.id}">Remove</button>`;
+                }
+
+                el.innerHTML = `
+                    <div class="file-info">
+                        <div>
+                            <div class="file-name" title="${item.file.name}">${item.file.name}</div>
+                            <span class="file-size">${formatBytes(item.file.size)}</span>
+                            <span class="file-status">${statusBadge}</span>
+                            ${savedPathHtml}
+                        </div>
+                    </div>
+                    <div class="file-actions">${actionBtns}</div>
+                `;
+                fileList.appendChild(el);
+            });
+
+            // Bind individual buttons
+            document.querySelectorAll('.remove-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = e.target.getAttribute('data-id');
+                    queue = queue.filter(item => item.id !== id);
+                    renderQueue();
+                });
+            });
+
+            document.querySelectorAll('.download-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = e.target.getAttribute('data-id');
+                    downloadSingle(id);
+                });
+            });
+
+            document.querySelectorAll('.preview-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = e.target.getAttribute('data-id');
+                    openPreview(id);
+                });
+            });
+        }
+
+        clearBtn.addEventListener('click', () => {
+            queue = [];
+            renderQueue();
+        });
+
+        // Convert All
+        convertAllBtn.addEventListener('click', async () => {
+            const pending = queue.filter(item => item.status === 'queued' || item.status === 'error');
+            if (pending.length === 0) return;
+
+            convertAllBtn.disabled = true;
+            clearBtn.disabled = true;
+            progressWrapper.style.display = 'block';
+            alertBanner.style.display = 'none';
+
+            let completed = 0;
+            const total = pending.length;
+            let autoSavedCount = 0;
+
+            const targetDir = outputDirInput.value.trim();
+            const autoSave = autoSaveCheckbox.checked;
+            const semanticMode = semanticModeCheckbox.checked;
+
+            for (const item of pending) {
+                item.status = 'converting';
+                renderQueue();
+
+                const formData = new FormData();
+                formData.append('file', item.file);
+                formData.append('output_dir', targetDir);
+                formData.append('auto_save', autoSave ? 'true' : 'false');
+                formData.append('semantic_mode', semanticMode ? 'true' : 'false');
+
+                try {
+                    const resp = await fetch('/api/convert', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const data = await resp.json();
+                    if (resp.ok && data.success) {
+                        item.status = 'success';
+                        item.result = data.markdown;
+                        item.mdFilename = data.markdown_filename;
+                        item.savedPath = data.saved_path;
+                        if (data.saved_path) autoSavedCount++;
+                    } else {
+                        item.status = 'error';
+                        item.errorMsg = data.error || 'Conversion failed';
+                    }
+                } catch (err) {
+                    item.status = 'error';
+                    item.errorMsg = err.message;
+                }
+
+                completed++;
+                const pct = Math.round((completed / total) * 100);
+                progressBarFill.style.width = pct + '%';
+                progressPercentage.textContent = pct + '%';
+                progressStatus.textContent = `Converted ${completed} of ${total} files...`;
+                renderQueue();
+            }
+
+            convertAllBtn.disabled = false;
+            clearBtn.disabled = false;
+            progressStatus.textContent = 'Batch conversion completed!';
+
+            if (autoSavedCount > 0) {
+                alertBannerText.textContent = `Successfully saved ${autoSavedCount} converted file(s) to: ${targetDir}`;
+                alertBanner.style.display = 'flex';
+            }
+        });
+
+        // Save All directly to chosen directory on disk
+        saveAllDirBtn.addEventListener('click', async () => {
+            const successful = queue.filter(item => item.status === 'success' && item.result);
+            if (successful.length === 0) return;
+
+            saveAllDirBtn.disabled = true;
+            saveAllDirBtn.textContent = 'Saving...';
+
+            try {
+                const targetDir = outputDirInput.value.trim();
+                const filesPayload = successful.map(item => ({
+                    filename: item.mdFilename || (item.file.name.replace(/\.[^/.]+$/, "") + ".md"),
+                    content: item.result
+                }));
+
+                const resp = await fetch('/api/save-files', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ files: filesPayload, output_dir: targetDir })
+                });
+
+                const data = await resp.json();
+                if (data.success) {
+                    alertBannerText.textContent = `Saved ${data.saved_count} file(s) directly to: ${data.output_dir}`;
+                    alertBanner.style.display = 'flex';
+                    successful.forEach((item, idx) => {
+                        if (data.paths && data.paths[idx]) {
+                            item.savedPath = data.paths[idx];
+                        }
+                    });
+                    renderQueue();
+                } else {
+                    alert('Error saving files: ' + (data.error || 'Unknown error'));
+                }
+            } catch (err) {
+                alert('Error saving files: ' + err.message);
+            } finally {
+                saveAllDirBtn.disabled = false;
+                saveAllDirBtn.textContent = 'Save All to Directory';
+            }
+        });
+
+        // Download Single .md (Browser download)
+        function downloadSingle(id) {
+            const item = queue.find(q => q.id === id);
+            if (!item || !item.result) return;
+            const blob = new Blob([item.result], { type: 'text/markdown;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = item.mdFilename || (item.file.name.replace(/\.[^/.]+$/, "") + ".md");
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Download All Individually (.md files through browser)
+        downloadAllBtn.addEventListener('click', async () => {
+            const successful = queue.filter(item => item.status === 'success' && item.result);
+            if (successful.length === 0) return;
+
+            downloadAllBtn.disabled = true;
+            downloadAllBtn.textContent = 'Downloading...';
+
+            for (let i = 0; i < successful.length; i++) {
+                downloadSingle(successful[i].id);
+                if (i < successful.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 250));
+                }
+            }
+
+            downloadAllBtn.disabled = false;
+            downloadAllBtn.textContent = 'Download All (.md)';
+        });
+
+        // Download All as ZIP
+        downloadZipBtn.addEventListener('click', async () => {
+            const successful = queue.filter(item => item.status === 'success' && item.result);
+            if (successful.length === 0) return;
+
+            downloadZipBtn.disabled = true;
+            downloadZipBtn.textContent = 'Creating ZIP...';
+
+            try {
+                const filesPayload = successful.map(item => ({
+                    filename: item.mdFilename || (item.file.name.replace(/\.[^/.]+$/, "") + ".md"),
+                    content: item.result
+                }));
+
+                const resp = await fetch('/api/download-zip', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ files: filesPayload })
+                });
+
+                if (!resp.ok) throw new Error('Failed to generate ZIP');
+
+                const blob = await resp.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `MarkItDown_Converted_${new Date().toISOString().slice(0,10)}.zip`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } catch (err) {
+                alert('Error creating ZIP: ' + err.message);
+            } finally {
+                downloadZipBtn.disabled = false;
+                downloadZipBtn.textContent = 'Download ZIP';
+            }
+        });
+
+        // Modal Preview
+        function openPreview(id) {
+            const item = queue.find(q => q.id === id);
+            if (!item || !item.result) return;
+            currentModalFile = item;
+            modalTitle.textContent = item.mdFilename || item.file.name;
+            modalContent.textContent = item.result;
+            previewModal.style.display = 'flex';
+        }
+
+        modalCloseBtn.addEventListener('click', () => previewModal.style.display = 'none');
+        window.addEventListener('click', (e) => {
+            if (e.target === previewModal) previewModal.style.display = 'none';
+        });
+
+        modalCopyBtn.addEventListener('click', () => {
+            if (currentModalFile && currentModalFile.result) {
+                navigator.clipboard.writeText(currentModalFile.result);
+                modalCopyBtn.textContent = 'Copied!';
+                setTimeout(() => modalCopyBtn.textContent = 'Copy to Clipboard', 2000);
+            }
+        });
+
+        modalDownloadBtn.addEventListener('click', () => {
+            if (currentModalFile) downloadSingle(currentModalFile.id);
+        });
+    </script>
+</body>
+</html>
