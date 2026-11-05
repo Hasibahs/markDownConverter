@@ -39,7 +39,7 @@
 
         .container {
             width: 100%;
-            max-width: 920px;
+            max-width: 960px;
             display: flex;
             flex-direction: column;
             gap: 20px;
@@ -74,11 +74,11 @@
             box-shadow: var(--shadow);
         }
 
-        /* Output Directory Config Card */
+        /* Output Directory & Configuration Card */
         .dir-card {
             background: #ffffff;
             border-radius: var(--radius);
-            padding: 18px 24px;
+            padding: 20px 24px;
             border: 1px solid var(--border);
             box-shadow: 0 2px 4px -1px rgb(0 0 0 / 0.05);
         }
@@ -217,18 +217,26 @@
             gap: 10px;
         }
 
+        .btn-group-wrap {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
         .btn {
             display: inline-flex;
             align-items: center;
             gap: 7px;
-            padding: 9px 16px;
+            padding: 9px 15px;
             border-radius: 8px;
-            font-size: 0.9rem;
+            font-size: 0.88rem;
             font-weight: 600;
             cursor: pointer;
             border: none;
             transition: all 0.15s ease;
             text-decoration: none;
+            white-space: nowrap;
         }
 
         .btn-primary {
@@ -256,6 +264,15 @@
 
         .btn-secondary:hover:not(:disabled) {
             background-color: #cbd5e1;
+        }
+
+        .btn-accent {
+            background-color: #7c3aed;
+            color: white;
+        }
+
+        .btn-accent:hover:not(:disabled) {
+            background-color: #6d28d9;
         }
 
         .btn:disabled {
@@ -310,7 +327,7 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 380px;
+            max-width: 400px;
         }
 
         .file-size {
@@ -407,7 +424,7 @@
             background: white;
             border-radius: var(--radius);
             width: 100%;
-            max-width: 850px;
+            max-width: 880px;
             max-height: 85vh;
             display: flex;
             flex-direction: column;
@@ -500,17 +517,33 @@
                 <button class="btn btn-secondary" id="browseDirBtn">Browse...</button>
                 <button class="btn btn-secondary" id="openDirBtn" title="Open this folder in Windows File Explorer">Open Folder</button>
             </div>
+            
             <div class="dir-checkbox-row">
                 <input type="checkbox" id="autoSaveCheckbox" checked>
                 <label for="autoSaveCheckbox">
                     <strong>Auto-save directly to this directory</strong> (bypasses browser download dialogs)
                 </label>
             </div>
+            
             <div class="dir-checkbox-row" style="margin-top: 6px;">
                 <input type="checkbox" id="semanticModeCheckbox" checked>
                 <label for="semanticModeCheckbox">
                     <strong>AI-Optimized Semantic Structure</strong> (enforces # headings, flattens troubleshooting tables to key-value lists, strips footers & page noise)
                 </label>
+            </div>
+
+            <!-- Combine Settings Section -->
+            <div class="dir-checkbox-row" style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border); display: flex; flex-wrap: wrap; gap: 16px; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <input type="checkbox" id="includeTocCheckbox" checked>
+                    <label for="includeTocCheckbox">
+                        <strong>Include Table of Contents in Combined .md</strong>
+                    </label>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <label for="combinedFilenameInput" style="font-weight: 600; color: #475569; font-size: 0.85rem;">Combined filename:</label>
+                    <input type="text" id="combinedFilenameInput" class="dir-input" style="padding: 5px 10px; width: 220px; font-size: 0.85rem;" value="combined_documents.md">
+                </div>
             </div>
         </div>
 
@@ -541,11 +574,19 @@
                 <div>
                     <span id="fileCountText" style="font-weight: 600; color: #475569;">0 files queued</span>
                 </div>
-                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <div class="btn-group-wrap">
                     <button class="btn btn-secondary" id="clearBtn">Clear All</button>
                     <button class="btn btn-primary" id="convertAllBtn">Convert All Files</button>
-                    <button class="btn btn-success" id="saveAllDirBtn" style="display: none;">Save All to Directory</button>
-                    <button class="btn btn-secondary" id="downloadAllBtn" style="display: none;">Download All (.md)</button>
+                    
+                    <!-- Individual Files Operations -->
+                    <button class="btn btn-success" id="saveAllDirBtn" style="display: none;" title="Save each converted document as a separate .md file in the output directory">Save All (Separate)</button>
+                    <button class="btn btn-secondary" id="downloadAllBtn" style="display: none;" title="Download each converted file individually via browser">Download All (Separate)</button>
+                    
+                    <!-- NEW: Combined Single .md Operations -->
+                    <button class="btn btn-accent" id="combineSaveDirBtn" style="display: none;" title="Combine all converted files into a single .md file and save directly to the output folder">Save Combined to Directory</button>
+                    <button class="btn btn-primary" id="combineDownloadBtn" style="display: none;" title="Combine all converted files into a single .md file and download it">Combine & Download (.md)</button>
+                    <button class="btn btn-secondary" id="previewCombinedBtn" style="display: none;" title="Preview the combined Markdown file">Preview Combined</button>
+
                     <button class="btn btn-secondary" id="downloadZipBtn" style="display: none;">Download ZIP</button>
                 </div>
             </div>
@@ -597,9 +638,15 @@
         const fileCountText = document.getElementById('fileCountText');
         const clearBtn = document.getElementById('clearBtn');
         const convertAllBtn = document.getElementById('convertAllBtn');
+        
+        // Buttons
         const saveAllDirBtn = document.getElementById('saveAllDirBtn');
         const downloadAllBtn = document.getElementById('downloadAllBtn');
+        const combineSaveDirBtn = document.getElementById('combineSaveDirBtn');
+        const combineDownloadBtn = document.getElementById('combineDownloadBtn');
+        const previewCombinedBtn = document.getElementById('previewCombinedBtn');
         const downloadZipBtn = document.getElementById('downloadZipBtn');
+
         const progressWrapper = document.getElementById('progressWrapper');
         const progressBarFill = document.getElementById('progressBarFill');
         const progressStatus = document.getElementById('progressStatus');
@@ -613,6 +660,8 @@
         const openDirBtn = document.getElementById('openDirBtn');
         const autoSaveCheckbox = document.getElementById('autoSaveCheckbox');
         const semanticModeCheckbox = document.getElementById('semanticModeCheckbox');
+        const includeTocCheckbox = document.getElementById('includeTocCheckbox');
+        const combinedFilenameInput = document.getElementById('combinedFilenameInput');
 
         const previewModal = document.getElementById('previewModal');
         const modalTitle = document.getElementById('modalTitle');
@@ -632,7 +681,7 @@
             return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
         }
 
-        // --- Load & Save Directory & Semantic Config ---
+        // --- Load & Save Directory & Settings Config ---
         async function loadConfig() {
             try {
                 const resp = await fetch('/api/config');
@@ -640,6 +689,8 @@
                 if (data.output_dir) outputDirInput.value = data.output_dir;
                 if (data.auto_save !== undefined) autoSaveCheckbox.checked = data.auto_save;
                 if (data.semantic_mode !== undefined) semanticModeCheckbox.checked = data.semantic_mode;
+                if (data.include_toc !== undefined) includeTocCheckbox.checked = data.include_toc;
+                if (data.combined_filename) combinedFilenameInput.value = data.combined_filename;
             } catch (err) {
                 console.error('Failed to load config', err);
             }
@@ -653,7 +704,9 @@
                     body: JSON.stringify({
                         output_dir: outputDirInput.value,
                         auto_save: autoSaveCheckbox.checked,
-                        semantic_mode: semanticModeCheckbox.checked
+                        semantic_mode: semanticModeCheckbox.checked,
+                        include_toc: includeTocCheckbox.checked,
+                        combined_filename: combinedFilenameInput.value
                     })
                 });
             } catch (err) {
@@ -664,6 +717,8 @@
         outputDirInput.addEventListener('change', saveConfig);
         autoSaveCheckbox.addEventListener('change', saveConfig);
         semanticModeCheckbox.addEventListener('change', saveConfig);
+        includeTocCheckbox.addEventListener('change', saveConfig);
+        combinedFilenameInput.addEventListener('change', saveConfig);
 
         browseDirBtn.addEventListener('click', async () => {
             browseDirBtn.disabled = true;
@@ -746,8 +801,13 @@
 
             // Check if any converted
             const hasSuccess = queue.some(item => item.status === 'success');
+            
+            // Toggle visibility for all batch action buttons
             saveAllDirBtn.style.display = hasSuccess ? 'inline-flex' : 'none';
             downloadAllBtn.style.display = hasSuccess ? 'inline-flex' : 'none';
+            combineSaveDirBtn.style.display = hasSuccess ? 'inline-flex' : 'none';
+            combineDownloadBtn.style.display = hasSuccess ? 'inline-flex' : 'none';
+            previewCombinedBtn.style.display = hasSuccess ? 'inline-flex' : 'none';
             downloadZipBtn.style.display = hasSuccess ? 'inline-flex' : 'none';
 
             fileList.innerHTML = '';
@@ -888,21 +948,25 @@
             }
         });
 
-        // Save All directly to chosen directory on disk
-        saveAllDirBtn.addEventListener('click', async () => {
+        // Helper to get successful files payload
+        function getSuccessfulFiles() {
             const successful = queue.filter(item => item.status === 'success' && item.result);
-            if (successful.length === 0) return;
+            return successful.map(item => ({
+                filename: item.mdFilename || (item.file.name.replace(/\.[^/.]+$/, "") + ".md"),
+                content: item.result
+            }));
+        }
+
+        // Save All directly to chosen directory on disk (Individual .md files)
+        saveAllDirBtn.addEventListener('click', async () => {
+            const filesPayload = getSuccessfulFiles();
+            if (filesPayload.length === 0) return;
 
             saveAllDirBtn.disabled = true;
             saveAllDirBtn.textContent = 'Saving...';
 
             try {
                 const targetDir = outputDirInput.value.trim();
-                const filesPayload = successful.map(item => ({
-                    filename: item.mdFilename || (item.file.name.replace(/\.[^/.]+$/, "") + ".md"),
-                    content: item.result
-                }));
-
                 const resp = await fetch('/api/save-files', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -911,8 +975,10 @@
 
                 const data = await resp.json();
                 if (data.success) {
-                    alertBannerText.textContent = `Saved ${data.saved_count} file(s) directly to: ${data.output_dir}`;
+                    alertBannerText.textContent = `Saved ${data.saved_count} individual file(s) directly to: ${data.output_dir}`;
                     alertBanner.style.display = 'flex';
+                    
+                    const successful = queue.filter(item => item.status === 'success' && item.result);
                     successful.forEach((item, idx) => {
                         if (data.paths && data.paths[idx]) {
                             item.savedPath = data.paths[idx];
@@ -926,7 +992,138 @@
                 alert('Error saving files: ' + err.message);
             } finally {
                 saveAllDirBtn.disabled = false;
-                saveAllDirBtn.textContent = 'Save All to Directory';
+                saveAllDirBtn.textContent = 'Save All (Separate)';
+            }
+        });
+
+        // --- NEW: Save Combined .md Directly to Directory ---
+        combineSaveDirBtn.addEventListener('click', async () => {
+            const filesPayload = getSuccessfulFiles();
+            if (filesPayload.length === 0) return;
+
+            combineSaveDirBtn.disabled = true;
+            combineSaveDirBtn.textContent = 'Combining & Saving...';
+
+            try {
+                const targetDir = outputDirInput.value.trim();
+                const combinedFilename = combinedFilenameInput.value.trim() || 'combined_documents.md';
+                const includeToc = includeTocCheckbox.checked;
+
+                const resp = await fetch('/api/save-combined', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        files: filesPayload,
+                        output_dir: targetDir,
+                        combined_filename: combinedFilename,
+                        include_toc: includeToc
+                    })
+                });
+
+                const data = await resp.json();
+                if (data.success) {
+                    alertBannerText.textContent = `Combined ${data.file_count} files into single file: ${data.save_path}`;
+                    alertBanner.style.display = 'flex';
+                } else {
+                    alert('Error saving combined file: ' + (data.error || 'Unknown error'));
+                }
+            } catch (err) {
+                alert('Error combining files: ' + err.message);
+            } finally {
+                combineSaveDirBtn.disabled = false;
+                combineSaveDirBtn.textContent = 'Save Combined to Directory';
+            }
+        });
+
+        // --- NEW: Combine & Download Single .md File via Browser ---
+        combineDownloadBtn.addEventListener('click', async () => {
+            const filesPayload = getSuccessfulFiles();
+            if (filesPayload.length === 0) return;
+
+            combineDownloadBtn.disabled = true;
+            combineDownloadBtn.textContent = 'Combining...';
+
+            try {
+                const combinedFilename = combinedFilenameInput.value.trim() || 'combined_documents.md';
+                const includeToc = includeTocCheckbox.checked;
+
+                const resp = await fetch('/api/download-combined', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        files: filesPayload,
+                        combined_filename: combinedFilename,
+                        include_toc: includeToc
+                    })
+                });
+
+                if (!resp.ok) throw new Error('Failed to generate combined markdown');
+
+                const blob = await resp.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = combinedFilename.endsWith('.md') ? combinedFilename : (combinedFilename + '.md');
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } catch (err) {
+                alert('Error downloading combined file: ' + err.message);
+            } finally {
+                combineDownloadBtn.disabled = false;
+                combineDownloadBtn.textContent = 'Combine & Download (.md)';
+            }
+        });
+
+        // --- NEW: Preview Combined Markdown ---
+        previewCombinedBtn.addEventListener('click', async () => {
+            const filesPayload = getSuccessfulFiles();
+            if (filesPayload.length === 0) return;
+
+            previewCombinedBtn.disabled = true;
+            previewCombinedBtn.textContent = 'Loading...';
+
+            try {
+                const combinedFilename = combinedFilenameInput.value.trim() || 'combined_documents.md';
+                const includeToc = includeTocCheckbox.checked;
+
+                // Build client-side combined preview
+                let parts = [];
+                if (includeToc && filesPayload.length > 1) {
+                    let tocLines = ["# Combined Documents", "", "## Table of Contents", ""];
+                    filesPayload.forEach((item, idx) => {
+                        const slug = item.filename.toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-|-$/g, '');
+                        tocLines.push(`${idx + 1}. [${item.filename}](#document-${slug})`);
+                    });
+                    parts.push(tocLines.join('\n'));
+                    parts.push('---');
+                }
+
+                filesPayload.forEach((item, idx) => {
+                    const slug = item.filename.toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-|-$/g, '');
+                    parts.push(`<a id="document-${slug}"></a>\n# Document: ${item.filename}\n\n${item.content.trim()}`);
+                    if (idx < filesPayload.length - 1) {
+                        parts.push('---');
+                    }
+                });
+
+                const combinedText = parts.join('\n\n') + '\n';
+
+                currentModalFile = {
+                    id: 'combined_preview',
+                    result: combinedText,
+                    mdFilename: combinedFilename
+                };
+
+                modalTitle.textContent = `${combinedFilename} (Combined Preview - ${filesPayload.length} files)`;
+                modalContent.textContent = combinedText;
+                previewModal.style.display = 'flex';
+            } catch (err) {
+                alert('Error previewing combined file: ' + err.message);
+            } finally {
+                previewCombinedBtn.disabled = false;
+                previewCombinedBtn.textContent = 'Preview Combined';
             }
         });
 
@@ -961,23 +1158,18 @@
             }
 
             downloadAllBtn.disabled = false;
-            downloadAllBtn.textContent = 'Download All (.md)';
+            downloadAllBtn.textContent = 'Download All (Separate)';
         });
 
         // Download All as ZIP
         downloadZipBtn.addEventListener('click', async () => {
-            const successful = queue.filter(item => item.status === 'success' && item.result);
-            if (successful.length === 0) return;
+            const filesPayload = getSuccessfulFiles();
+            if (filesPayload.length === 0) return;
 
             downloadZipBtn.disabled = true;
             downloadZipBtn.textContent = 'Creating ZIP...';
 
             try {
-                const filesPayload = successful.map(item => ({
-                    filename: item.mdFilename || (item.file.name.replace(/\.[^/.]+$/, "") + ".md"),
-                    content: item.result
-                }));
-
                 const resp = await fetch('/api/download-zip', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1027,7 +1219,21 @@
         });
 
         modalDownloadBtn.addEventListener('click', () => {
-            if (currentModalFile) downloadSingle(currentModalFile.id);
+            if (currentModalFile) {
+                if (currentModalFile.id === 'combined_preview') {
+                    const blob = new Blob([currentModalFile.result], { type: 'text/markdown;charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = currentModalFile.mdFilename || 'combined_documents.md';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                } else {
+                    downloadSingle(currentModalFile.id);
+                }
+            }
         });
     </script>
 </body>

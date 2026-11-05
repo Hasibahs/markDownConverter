@@ -1,5 +1,6 @@
 import os
 import io
+import re
 import json
 import zipfile
 import tempfile
@@ -22,15 +23,22 @@ def get_default_output_dir():
 
 def load_config():
     default_dir = get_default_output_dir()
+    default_cfg = {
+        "output_dir": default_dir,
+        "auto_save": True,
+        "semantic_mode": True,
+        "combined_filename": "combined_documents.md",
+        "include_toc": True
+    }
     if os.path.exists(CONFIG_FILE):
         try:
             with open(CONFIG_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                if "output_dir" in data and data["output_dir"]:
-                    return data
+                default_cfg.update({k: v for k, v in data.items() if v is not None})
+                return default_cfg
         except Exception:
             pass
-    return {"output_dir": default_dir, "auto_save": True, "semantic_mode": True}
+    return default_cfg
 
 def save_config(cfg):
     try:
@@ -41,6 +49,36 @@ def save_config(cfg):
 
 # Initialize MarkItDown instance once
 md = MarkItDown()
+
+def combine_markdown_files(files_data, include_toc=True, title="Combined Documents"):
+    """
+    Combines multiple converted markdown documents into a single document.
+    files_data is a list of dicts: [{'filename': ..., 'content': ...}, ...]
+    """
+    if not files_data:
+        return ""
+
+    parts = []
+    if include_toc and len(files_data) > 1:
+        toc_lines = [f"# {title}", "", "## Table of Contents", ""]
+        for i, item in enumerate(files_data, 1):
+            name = item.get("filename", f"Document {i}")
+            anchor = re.sub(r"[^a-zA-Z0-9_-]+", "-", name.lower()).strip("-")
+            toc_lines.append(f"{i}. [{name}](#document-{anchor})")
+        parts.append("\n".join(toc_lines))
+        parts.append("---")
+
+    for i, item in enumerate(files_data):
+        name = item.get("filename", f"Document {i+1}")
+        content = item.get("content", "").strip()
+        anchor = re.sub(r"[^a-zA-Z0-9_-]+", "-", name.lower()).strip("-")
+
+        doc_section = f'<a id="document-{anchor}"></a>\n# Document: {name}\n\n{content}'
+        parts.append(doc_section)
+        if i < len(files_data) - 1:
+            parts.append("---")
+
+    return "\n\n".join(parts).strip() + "\n"
 
 @app.route("/")
 def index():
@@ -57,6 +95,10 @@ def config_endpoint():
             cfg["auto_save"] = bool(data["auto_save"])
         if "semantic_mode" in data:
             cfg["semantic_mode"] = bool(data["semantic_mode"])
+        if "combined_filename" in data and data["combined_filename"].strip():
+            cfg["combined_filename"] = data["combined_filename"].strip()
+        if "include_toc" in data:
+            cfg["include_toc"] = bool(data["include_toc"])
         save_config(cfg)
         return jsonify({"success": True, "config": cfg})
     else:
@@ -142,10 +184,7 @@ def convert_file():
         result = md.convert(tmp_path)
         markdown_text = result.markdown
 
-        # Apply AI Semantic Enhancements if enabled:
-        # 1. Enforce Header Hierarchy (#, ##, ###)
-        # 2. Flatten Fragmented & Troubleshooting Tables to Key-Value Lists
-        # 3. Strip Pagination Noise, Running Footers, Page Numbers via Regex
+        # Apply AI Semantic Enhancements if enabled
         if semantic_mode:
             markdown_text = enhance_markdown_semantics(markdown_text, pdf_path=tmp_path)
 
@@ -186,7 +225,7 @@ def convert_file():
 
 @app.route("/api/save-files", methods=["POST"])
 def save_files_to_disk():
-    """Saves multiple converted files to the chosen local directory."""
+    """Saves multiple converted files to the chosen local directory as individual .md files."""
     data = request.get_json() or {}
     files = data.get("files", [])
     target_dir = data.get("output_dir") or load_config().get("output_dir")
@@ -214,6 +253,66 @@ def save_files_to_disk():
         })
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route("/api/save-combined", methods=["POST"])
+def save_combined():
+    """Combines multiple converted files into a single .md file and saves to local directory."""
+    data = request.get_json() or {}
+    files = data.get("files", [])
+    if not files:
+        return jsonify({"success": False, "error": "No files to combine"}), 400
+
+    target_dir = data.get("output_dir") or load_config().get("output_dir")
+    if not target_dir:
+        return jsonify({"success": False, "error": "No output directory specified"}), 400
+
+    combined_filename = os.path.basename(data.get("combined_filename") or load_config().get("combined_filename") or "combined_documents.md")
+    if not combined_filename.lower().endswith(".md"):
+        combined_filename += ".md"
+
+    include_toc = bool(data.get("include_toc", load_config().get("include_toc", True)))
+    combined_content = combine_markdown_files(files, include_toc=include_toc)
+
+    target_dir = os.path.normpath(target_dir)
+    try:
+        os.makedirs(target_dir, exist_ok=True)
+        save_path = os.path.join(target_dir, combined_filename)
+        with open(save_path, "w", encoding="utf-8") as f:
+            f.write(combined_content)
+
+        return jsonify({
+            "success": True,
+            "filename": combined_filename,
+            "save_path": save_path,
+            "output_dir": target_dir,
+            "file_count": len(files),
+            "content": combined_content
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route("/api/download-combined", methods=["POST"])
+def download_combined():
+    """Combines multiple converted files into a single .md file for browser download."""
+    data = request.get_json() or {}
+    files = data.get("files", [])
+    if not files:
+        return jsonify({"error": "No files to combine"}), 400
+
+    combined_filename = os.path.basename(data.get("combined_filename") or load_config().get("combined_filename") or "combined_documents.md")
+    if not combined_filename.lower().endswith(".md"):
+        combined_filename += ".md"
+
+    include_toc = bool(data.get("include_toc", load_config().get("include_toc", True)))
+    combined_content = combine_markdown_files(files, include_toc=include_toc)
+
+    buf = io.BytesIO(combined_content.encode("utf-8"))
+    return send_file(
+        buf,
+        mimetype="text/markdown; charset=utf-8",
+        as_attachment=True,
+        download_name=combined_filename
+    )
 
 @app.route("/api/download-zip", methods=["POST"])
 def download_zip():
